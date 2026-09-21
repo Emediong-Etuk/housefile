@@ -5,6 +5,16 @@ import { verifySvixSignature } from "./lib/svix";
 
 const http = httpRouter();
 
+// AgentMail's `from_` has been observed as both a bare array of
+// addresses and a single "Display Name <addr>" string — never index
+// into it positionally without checking which shape it actually is.
+function extractFromAddress(from: string[] | string | undefined): string {
+  const raw = Array.isArray(from) ? from[0] : from;
+  if (!raw) return "unknown";
+  const angleMatch = raw.match(/<([^>]+)>/);
+  return (angleMatch ? angleMatch[1] : raw).trim();
+}
+
 http.route({
   path: "/agentmail/webhook",
   method: "POST",
@@ -20,7 +30,7 @@ http.route({
         inbox_id?: string;
         message_id?: string;
         thread_id?: string;
-        from_?: string[];
+        from_?: string[] | string;
         subject?: string;
         text?: string;
       };
@@ -56,7 +66,7 @@ http.route({
     }
 
     const message = payload.message;
-    const fromAddress = message?.from_?.[0] ?? "unknown";
+    const fromAddress = extractFromAddress(message?.from_);
     const text = message?.text ?? "";
     const messageId = message?.message_id;
     if (!text || !messageId) return new Response(null, { status: 200 });

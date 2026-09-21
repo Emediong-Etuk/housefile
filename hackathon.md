@@ -10,9 +10,9 @@
 - **Components:** none
 - **Convex features:** schema (listings, faqs, stays, drafts, opsMessages, agentmailInboxes) with indexes, queries, mutations, actions, an HTTP action webhook (`convex/http.ts`), scheduled functions (`ctx.scheduler.runAfter`), typed env vars (`convex/convex.config.ts`), realtime `useQuery` on the frontend
 - **Auth:** none
-- **AI models:** gpt-4o-mini (default, configurable via `OPENAI_MODEL`; called directly via the OpenAI API). `OPENAI_API_KEY`, `FIRECRAWL_API_KEY`, and `AGENTMAIL_API_KEY` are now set on the deployment; the live calls haven't been exercised end-to-end since.
+- **AI models:** gpt-4o-mini (default, configurable via `OPENAI_MODEL`; called directly via the OpenAI API). Confirmed live-reachable, but every call is currently rejected with `insufficient_quota` — the OpenAI account has no billing/credits.
 - **Started:** 2026-09-19T18:49:14Z
-- **Last updated:** 2026-09-21T20:48:12Z
+- **Last updated:** 2026-09-21T21:14:40Z
 
 ## Log
 
@@ -202,3 +202,32 @@ Correction to the previous entry: `OPENAI_API_KEY`, `FIRECRAWL_API_KEY`,
 and `AGENTMAIL_API_KEY` are now set on the deployment (values not
 recorded here). A live end-to-end test with them and the `convex.site`
 frontend deploy are still the two things left before submission.
+
+### 2026-09-21 - working tree
+Ran the real end-to-end test against the live deployment, against a
+real listing (`listings:createFromImport`), real facts, a real
+AgentMail inbox (`agentmail:provisionInbox`), and a real email sent
+from a second AgentMail inbox to it — the first genuine, non-simulated
+run of every piece.
+
+Results: AgentMail is fully proven live — the signed webhook actually
+fired, `convex/http.ts` verified its Svix signature correctly, and the
+inbound message landed in `opsMessages` with the right message ID and
+text. Firecrawl is confirmed reachable and working (a real scrape
+completed). OpenAI is confirmed reachable but every call currently
+fails with `insufficient_quota` — the account has no billing set up,
+so no draft was produced by either the import or the answer path. That
+one live email also caught and led to fixing a real bug: AgentMail's
+`from_` field arrived as a single "Display Name <address>" string, not
+the array of bare addresses shown in its own docs example, so
+`message?.from_?.[0]` silently returned a single character instead of
+the sender's address. `convex/http.ts` now handles both shapes and
+extracts the address out of angle brackets when present; re-tested
+live and confirmed the second inbound message logged the correct
+sender address. Nothing else needed fixing — schema, mutations, and
+the webhook plumbing all matched their live payloads on the first try.
+
+What's left before submission: OpenAI billing (host has to add it —
+outside what this session can do), then a quick re-run of the same
+test with an actual grounded/flagged draft produced, and the
+`convex.site` frontend deploy.
