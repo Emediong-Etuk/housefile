@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
@@ -15,8 +15,19 @@ const REQUIRED_FACT_FIELDS: { key: string; label: string; placeholder: string }[
 ];
 
 export default function ListingPage() {
-  const params = useParams<{ listingId: string }>();
-  const listingId = params.listingId as Id<"listings">;
+  return (
+    <Suspense fallback={<PageShell>Loading…</PageShell>}>
+      <ListingPageInner />
+    </Suspense>
+  );
+}
+
+function ListingPageInner() {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get("id");
+
+  if (!idParam) return <PageShell>Missing listing id.</PageShell>;
+  const listingId = idParam as Id<"listings">;
 
   const listing = useQuery(api.listings.get, { listingId });
   const faqs = useQuery(api.faqs.listByListing, { listingId });
@@ -258,7 +269,7 @@ function StaysSection({
           parking: parking || undefined,
         },
       });
-      setLastLink(`${window.location.origin}/stays/${slug}`);
+      setLastLink(`${window.location.origin}/stays/guest?slug=${slug}`);
       setGuestFirstName("");
       setCheckIn("");
       setCheckOut("");
@@ -327,7 +338,7 @@ function StaysSection({
               {stay.guestFirstName} · {new Date(stay.checkIn).toLocaleDateString()}–
               {new Date(stay.checkOut).toLocaleDateString()}
             </span>
-            <a href={`/stays/${stay.slug}`} className="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
+            <a href={`/stays/guest?slug=${stay.slug}`} className="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
               View page
             </a>
           </li>

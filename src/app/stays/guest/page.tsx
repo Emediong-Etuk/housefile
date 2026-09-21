@@ -1,13 +1,26 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 
 const KNOWN_KEYS = ["wifiName", "wifiPassword", "accessMethod", "parkingInstructions", "quirk"];
 
 export default function StayPage() {
-  const { slug } = useParams<{ slug: string }>();
+  return (
+    <Suspense fallback={<Shell>Loading…</Shell>}>
+      <StayPageInner />
+    </Suspense>
+  );
+}
+
+function StayPageInner() {
+  const searchParams = useSearchParams();
+  const slug = searchParams.get("slug");
+
+  if (!slug) return <Shell>Missing stay link.</Shell>;
+
   const stay = useQuery(api.stays.getBySlug, { slug });
   const listing = useQuery(api.listings.get, stay ? { listingId: stay.listingId } : "skip");
   const faqs = useQuery(api.faqs.listByListing, stay ? { listingId: stay.listingId } : "skip");

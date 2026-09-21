@@ -3,16 +3,16 @@
 - **Project:** Housefile
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Gives a short-term-rental property a memory — imports a listing, lets the host add the private facts guests actually ask about, and answers guest questions from that property file, only citing what it truly knows and learning from the host's corrections.
-- **Live app:** not deployed (Convex backend is live at https://nautical-oyster-722.convex.site; frontend not deployed there yet)
+- **Live app:** https://fine-hornet-3.convex.site
 - **Repo:** https://github.com/Emediong-Etuk/housefile
 - **Frontend:** Convex static hosting
-- **Convex deployment:** https://nautical-oyster-722.convex.cloud (dev)
-- **Components:** none
+- **Convex deployment:** https://fine-hornet-3.convex.cloud (production); https://nautical-oyster-722.convex.cloud (dev)
+- **Components:** @convex-dev/static-hosting
 - **Convex features:** schema (listings, faqs, stays, drafts, opsMessages, agentmailInboxes) with indexes, queries, mutations, actions, an HTTP action webhook (`convex/http.ts`), scheduled functions (`ctx.scheduler.runAfter`), typed env vars (`convex/convex.config.ts`), realtime `useQuery` on the frontend
 - **Auth:** none
 - **AI models:** gpt-4o-mini (default, configurable via `OPENAI_MODEL`; called directly via the OpenAI API). Confirmed live-reachable, but every call is currently rejected with `insufficient_quota` — the OpenAI account has no billing/credits.
 - **Started:** 2026-09-19T18:49:14Z
-- **Last updated:** 2026-09-21T21:14:40Z
+- **Last updated:** 2026-09-21T21:33:55Z
 
 ## Log
 
@@ -229,5 +229,50 @@ the webhook plumbing all matched their live payloads on the first try.
 
 What's left before submission: OpenAI billing (host has to add it —
 outside what this session can do), then a quick re-run of the same
-test with an actual grounded/flagged draft produced, and the
-`convex.site` frontend deploy.
+test with an actual grounded/flagged draft produced.
+
+### 2026-09-21 - working tree
+Deployed to `convex.site`, in production, and it required real fixes,
+not just running the deploy command:
+
+- **Dynamic routes don't survive a static export.** `/host/[listingId]`
+  and `/stays/[slug]` depend on a server to resolve a path segment it
+  has never seen before; a static host only has the exact files it was
+  given at build time. Moved both to query-param routes —
+  `/host/listing?id=` and `/stays/guest?slug=` — reading
+  `useSearchParams()` instead of `useParams()`, each wrapped in
+  `<Suspense>` as the static export requires. Added `output: "export"`
+  to `next.config.ts`; the build went from 2 dynamic (ƒ) routes to all
+  static (○).
+- **`redirect()` needs a server to complete.** The `/` → `/host`
+  redirect used Next's server `redirect()`, which relies on a server
+  interpreting an RSC signal — with no server, it just did nothing.
+  Client-side `router.replace()` didn't work either: it fetches RSC
+  flight data the same way, which a plain static host doesn't resolve
+  the same way. A hard `window.location.replace("/host")` in a
+  `useEffect` is what actually works under static hosting, confirmed
+  live.
+- **The static build was pointed at the wrong deployment.** The setup
+  tool's own instructions require mapping `VITE_CONVEX_URL` into
+  `NEXT_PUBLIC_CONVEX_URL` in the `build` script; skipping that step
+  (easy to miss) meant `.env.local`'s dev URL got embedded into the
+  production static bundle instead of the real prod URL. Caught by
+  grepping the built JS for the embedded `.convex.cloud` URL before
+  trusting the deploy, not by assuming the tool handled it.
+
+Deployed the backend to a real production deployment
+(`fine-hornet-3`, distinct from the `nautical-oyster-722` dev one) with
+`npx convex deploy --yes` (the documented non-interactive flag for
+exactly this), then the static frontend with
+`npx @convex-dev/static-hosting upload --dist out --prod`. Verified
+live: every route (`/`, `/host`, `/host/listing`, `/stays/guest`)
+returns 200, the embedded Convex URL is the production one, and a
+real headless-browser run confirmed the `/` → `/host` redirect
+actually completing end to end (repeat runs were flaky purely from
+this sandbox's own outbound network reliability to `convex.site`, not
+the app — even a plain CSS file failed to load on the flaky runs).
+
+`hackathon.md`'s Live app and Convex deployment fields now point at
+the real production URLs. What's left before submission is unchanged:
+add OpenAI billing, then re-run the live test end to end with a real
+draft produced.

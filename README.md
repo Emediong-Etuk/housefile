@@ -26,9 +26,16 @@ for the evidence-based build log.
 ## Routes
 
 - `/host` — import a listing, see your properties
-- `/host/[listingId]` — complete required facts, set up the email inbox,
-  create stays, run the inbox (ask a question, approve/discard/teach)
-- `/stays/[slug]` — the public guest page
+- `/host/listing?id=<listingId>` — complete required facts, set up the
+  email inbox, create stays, run the inbox (ask a question,
+  approve/discard/teach)
+- `/stays/guest?slug=<slug>` — the public guest page
+
+Query-param based rather than dynamic path segments (`/host/[listingId]`)
+because the deployed frontend is a static export (`output: "export"` in
+`next.config.ts`, served from `convex.site`) — a static host can't resolve
+an arbitrary path segment it didn't know about at build time, but a query
+string is just part of the same static page.
 
 ## Running locally
 
@@ -45,6 +52,15 @@ npx convex env set OPENAI_API_KEY sk-...
 npx convex env set FIRECRAWL_API_KEY fc-...
 npx convex env set AGENTMAIL_API_KEY am_...
 ```
+
+## Deploying
+
+```bash
+npx convex deploy --yes                          # backend to prod
+npx @convex-dev/static-hosting deploy --skip-convex --dist out
+```
+
+Live at `https://<prod-deployment>.convex.site`.
 
 ## Core loop
 

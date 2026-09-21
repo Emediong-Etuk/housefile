@@ -66,7 +66,7 @@ export default function HostDashboardPage() {
         {listings?.map((listing) => (
           <Link
             key={listing._id}
-            href={`/host/${listing._id}`}
+            href={`/host/listing?id=${listing._id}`}
             className="block rounded-lg border border-zinc-200 p-4 transition hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
           >
             <div className="flex items-center justify-between gap-3">
