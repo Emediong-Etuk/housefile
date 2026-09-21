@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { getOrCreateHostId } from "@/lib/hostId";
@@ -64,9 +63,9 @@ export function HostDashboard() {
           </p>
         )}
         {listings?.map((listing) => (
-          <Link
+          <a
             key={listing._id}
-            href={`/host/listing?id=${listing._id}`}
+            href={`/host/listing.html?id=${listing._id}`}
             className="block rounded-lg border border-zinc-200 p-4 transition hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
           >
             <div className="flex items-center justify-between gap-3">
@@ -84,7 +83,7 @@ export function HostDashboard() {
             {listing.locationText && (
               <p className="mt-1 text-sm text-zinc-500">{listing.locationText}</p>
             )}
-          </Link>
+          </a>
         ))}
       </div>
     </div>

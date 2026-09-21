@@ -300,3 +300,46 @@ sandbox (the deployment is served through Cloudflare, which advertises
 to test with QUIC disabled in their own browser to confirm or rule
 this out before deciding whether static hosting via convex.site is
 viable as configured.
+
+**Root cause found and fixed.** QUIC-off, Incognito, a second network
+(mobile data), and a second browser entirely all still hung — ruling
+out the browser/extension/network theories above. The host's own
+Chrome DevTools Network tab was the actual signal: the `/host`
+*document* request itself sat "Pending" forever, initiated by a script
+chunk whose content was exactly the root page's
+`window.location.replace("/host")`. `/host` was rendering the root
+redirect component, not `HostDashboard` — an infinite self-redirect
+(navigate to `/host` → runs the root page's effect → replaces to
+`/host` → repeat), matching every symptom (blank page, spinner that
+never stops, tab title rendering fine because the outer HTML shell is
+identical either way).
+
+Cause: `@convex-dev/static-hosting`'s asset resolver
+(`node_modules/@convex-dev/static-hosting/src/component/lib.ts`,
+`resolveAssetDocument`) only does an exact path match, and falls back
+unconditionally to `/index.html` for any extension-less miss — there's
+no `/host` → `/host.html` normalization. Next's static export writes
+`out/host.html`, `out/host/listing.html`, `out/stays/guest.html` as
+sibling files (confirmed distinct locally, and confirmed served
+correctly when fetched with the literal `.html` extension), but a
+request for the clean path `/host` doesn't exact-match `/host.html`,
+has no extension, and so silently falls back to serving `/index.html`
+— which is the redirect page. curl never caught this because a plain
+GET can't see that it received the *wrong* 200, and my own diagnostics
+kept looking at server health and browser/network theories instead of
+diffing the actual bytes returned for `/` vs `/host`.
+
+Fix: since this hosting component is effectively single-page-app
+shaped (one real entry point, everything else reachable only by exact
+filename), every in-app navigation now links to the real `.html`
+filename instead of the clean Next.js route: root's redirect target
+(`src/app/page.tsx`), the dashboard→listing link and the "all
+properties" back-link (now plain `<a>` tags instead of `next/link`,
+which would otherwise try an RSC-based soft navigation to a path with
+no matching Next.js route), and the guest stay-page links generated in
+`host/listing/page.tsx`. Rebuilt, redeployed
+(`npx convex deploy -y` + `npx @convex-dev/static-hosting deploy
+--skip-convex --dist ./out`, since neither step prompts cleanly in a
+non-interactive shell), and re-ran the Playwright network trace:
+`document.readyState: complete`, 0 pending requests. The live site now
+actually finishes loading.

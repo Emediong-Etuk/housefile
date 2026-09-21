@@ -59,7 +59,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
 function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
   return (
     <div>
-      <a href="/host" className="text-sm text-zinc-500 hover:underline">
+      <a href="/host.html" className="text-sm text-zinc-500 hover:underline">
         ← All properties
       </a>
       <div className="mt-2 flex items-center justify-between gap-3">
@@ -269,7 +269,7 @@ function StaysSection({
           parking: parking || undefined,
         },
       });
-      setLastLink(`${window.location.origin}/stays/guest?slug=${slug}`);
+      setLastLink(`${window.location.origin}/stays/guest.html?slug=${slug}`);
       setGuestFirstName("");
       setCheckIn("");
       setCheckOut("");
@@ -338,7 +338,7 @@ function StaysSection({
               {stay.guestFirstName} · {new Date(stay.checkIn).toLocaleDateString()}–
               {new Date(stay.checkOut).toLocaleDateString()}
             </span>
-            <a href={`/stays/guest?slug=${stay.slug}`} className="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
+            <a href={`/stays/guest.html?slug=${stay.slug}`} className="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
               View page
             </a>
           </li>
