@@ -276,3 +276,27 @@ the app — even a plain CSS file failed to load on the flaky runs).
 the real production URLs. What's left before submission is unchanged:
 add OpenAI billing, then re-run the live test end to end with a real
 draft produced.
+
+### 2026-09-21 - working tree
+Host reported `/host` on the live site "never finished" loading. Found
+and fixed a real, separate bug while investigating: the build script's
+`NEXT_PUBLIC_CONVEX_URL=${VITE_CONVEX_URL:-$NEXT_PUBLIC_CONVEX_URL}`
+pattern always assigns the variable, so a plain `npm run build` outside
+the static-hosting deploy wrapper set it to an empty string rather than
+falling back to `.env.local` — silently breaking `ConvexReactClient`'s
+URL validation. Only reproduces via a manual build, not the deploy path
+actually used to ship, so it isn't confirmed as the cause of the
+reported hang, but it's a real latent bug now fixed regardless (only
+override the var when the wrapper actually provides one). Extracted
+the dashboard into a shared `HostDashboard` component along the way.
+
+The reported hang itself remains open. Server-side, `/host` is
+reliably healthy: 5/5 direct HTTP requests succeeded in under 0.35s
+each. A sandboxed headless-Chromium test hit repeated
+`ERR_TOO_MANY_RETRIES` on the same URL that `curl` never did — this
+points at an HTTP/3-over-QUIC negotiation issue specific to that
+sandbox (the deployment is served through Cloudflare, which advertises
+`alt-svc: h3`), not a confirmed server or app bug. Waiting on the host
+to test with QUIC disabled in their own browser to confirm or rule
+this out before deciding whether static hosting via convex.site is
+viable as configured.
