@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { HouseIcon } from "@/components/icons";
 import { CopyButton } from "@/components/CopyButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const REQUIRED_FACT_FIELDS: { key: string; label: string; placeholder: string }[] = [
   { key: "wifiName", label: "Wi-Fi name", placeholder: "OakHouse" },
@@ -95,22 +96,17 @@ function SectionCard({
 
 function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
   const removeListing = useMutation(api.listings.remove);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
-    if (
-      !window.confirm(
-        `Delete "${listing.name}"? This removes its facts, stays, and inbox — guest links will stop working.`,
-      )
-    ) {
-      return;
-    }
     setDeleting(true);
     try {
       await removeListing({ listingId: listing._id });
       window.location.href = "/host.html";
     } catch {
       setDeleting(false);
+      setConfirmOpen(false);
     }
   }
 
@@ -125,12 +121,20 @@ function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
         </a>
         <button
           type="button"
-          onClick={() => void handleDelete()}
-          disabled={deleting}
-          className="text-xs font-medium text-taupe-light transition hover:text-clay-dark disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => setConfirmOpen(true)}
+          className="text-xs font-medium text-taupe-light transition hover:text-clay-dark"
         >
-          {deleting ? "Deleting…" : "Delete property"}
+          Delete property
         </button>
+        <ConfirmDialog
+          open={confirmOpen}
+          title={`Delete "${listing.name}"?`}
+          description="This removes its facts, stays, and inbox — guest links will stop working. This can't be undone."
+          confirmLabel="Delete property"
+          busy={deleting}
+          onConfirm={() => void handleDelete()}
+          onCancel={() => setConfirmOpen(false)}
+        />
       </div>
       <div className="mt-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
