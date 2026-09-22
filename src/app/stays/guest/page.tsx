@@ -160,7 +160,7 @@ function LoadingSkeleton() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grain-backdrop min-h-full">
+    <div className="min-h-full">
       <div className="mx-auto max-w-md px-6 py-14 text-ink">{children}</div>
     </div>
   );

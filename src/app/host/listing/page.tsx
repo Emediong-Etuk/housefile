@@ -62,7 +62,7 @@ function LoadingSkeleton() {
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grain-backdrop min-h-full">
+    <div className="min-h-full">
       <div className="mx-auto max-w-2xl space-y-12 px-6 py-12 text-ink">{children}</div>
     </div>
   );

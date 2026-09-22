@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { getOrCreateHostId } from "@/lib/hostId";
-import { HouseIcon } from "@/components/icons";
+import { HouseIcon, HouseOutline } from "@/components/icons";
 
 export function HostDashboard() {
   const [hostId, setHostId] = useState<string | null>(null);
@@ -33,18 +33,25 @@ export function HostDashboard() {
   }
 
   return (
-    <div className="grain-backdrop min-h-full">
+    <div className="min-h-full">
       <div className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
-        <header className="animate-fade-up text-center">
+        <header className="animate-fade-up relative text-center">
+          <HouseOutline className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 text-clay/[0.08] sm:h-80 sm:w-80" />
           <div className="mx-auto flex h-14 w-14 animate-float items-center justify-center rounded-2xl bg-clay text-paper shadow-soft">
             <HouseIcon className="h-7 w-7" />
           </div>
           <h1 className="mt-5 font-serif text-4xl font-medium tracking-tight text-ink sm:text-5xl">
             Housefile
           </h1>
-          <p className="mt-3 text-base text-taupe">
-            Give your property a memory — every guest question answered from facts, never a guess.
+          <p className="mx-auto mt-3 max-w-md text-base text-taupe">
+            Answers your guests&apos; questions automatically — grounded in facts you set, never a guess.
           </p>
+          <a
+            href="/how-it-works.html"
+            className="link-underline mt-3 inline-block text-sm font-medium text-clay-dark transition hover:text-clay"
+          >
+            See how it works →
+          </a>
         </header>
 
         <form
@@ -63,7 +70,7 @@ export function HostDashboard() {
           <button
             type="submit"
             disabled={importing || !hostId}
-            className="shrink-0 rounded-xl bg-clay px-5 py-3 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="shrink-0 rounded-xl bg-clay px-5 py-3 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:animate-none enabled:animate-pulse-glow"
           >
             {importing ? "Importing…" : "Import listing"}
           </button>

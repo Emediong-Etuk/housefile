@@ -4,17 +4,20 @@
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces);
 
-  --color-cream: #fbf8f3;
-  --color-paper: #ffffff;
-  --color-ink: #2a241e;
-  --color-taupe: #8a8072;
-  --color-taupe-light: #b3a999;
-  --color-sand: #e8e1d6;
-  --color-sand-dark: #d8cebb;
+  --color-cream: #faf3e9;
+  --color-paper: #fffcf8;
+  --color-ink: #2c2318;
+  --color-taupe: #8f7e68;
+  --color-taupe-light: #bcab90;
+  --color-sand: #ecdfc9;
+  --color-sand-dark: #ddc9a6;
 
-  --color-clay: #c2632f;
-  --color-clay-dark: #a54f22;
-  --color-clay-light: #f3e4d8;
+  --color-clay: #cc602a;
+  --color-clay-dark: #a54a1e;
+  --color-clay-light: #f6e0cc;
+
+  --color-amber: #e0a53f;
+  --color-amber-light: #f8e6bf;
 
   --color-sage: #3f6b52;
   --color-sage-bg: #e7f0ea;
@@ -22,8 +25,8 @@
   --color-honey: #a5731f;
   --color-honey-bg: #fbf0dd;
 
-  --shadow-soft: 0 1px 2px rgba(42, 36, 30, 0.04), 0 8px 24px -12px rgba(42, 36, 30, 0.12);
-  --shadow-lift: 0 4px 8px rgba(42, 36, 30, 0.06), 0 16px 32px -12px rgba(42, 36, 30, 0.18);
+  --shadow-soft: 0 1px 2px rgba(44, 35, 24, 0.05), 0 8px 24px -12px rgba(44, 35, 24, 0.14);
+  --shadow-lift: 0 4px 8px rgba(44, 35, 24, 0.07), 0 20px 40px -14px rgba(44, 35, 24, 0.22);
 }
 
 html {
@@ -43,7 +46,7 @@ body {
 
 /* Warm, textured backdrop instead of a flat fill — evokes paper / linen. */
 .grain-backdrop {
-  background-image: radial-gradient(circle at 1px 1px, rgba(42, 36, 30, 0.05) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgba(44, 35, 24, 0.06) 1px, transparent 0);
   background-size: 22px 22px;
 }
 
@@ -97,10 +100,54 @@ body {
 @keyframes float-slow {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) rotate(0deg);
   }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-7px) rotate(-2deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(204, 96, 42, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(204, 96, 42, 0);
+  }
+}
+
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, -5%) scale(1.1);
+  }
+}
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-7%, 6%) scale(0.94);
+  }
+}
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(5%, 7%) scale(1.06);
+  }
+}
+
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -114,11 +161,14 @@ body {
   animation: scale-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .animate-float {
-  animation: float-slow 5s ease-in-out infinite;
+  animation: float-slow 6s ease-in-out infinite;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2.6s ease-in-out infinite;
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--color-sand) 25%, #f4efe4 37%, var(--color-sand) 63%);
+  background: linear-gradient(90deg, var(--color-sand) 25%, #faf1de 37%, var(--color-sand) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.5s ease infinite;
   border-radius: 0.75rem;
@@ -134,4 +184,44 @@ body {
 }
 .link-underline:hover {
   background-size: 100% 1px;
+}
+
+/* Ambient, house-themed "living" backdrop — slow drifting warm gradient
+   blobs standing in for a literal background video (kept as CSS so a
+   static export stays fast and needs no hosted asset). */
+.ambient-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.ambient-blob-a {
+  animation: drift-a 22s ease-in-out infinite;
+}
+.ambient-blob-b {
+  animation: drift-b 26s ease-in-out infinite;
+}
+.ambient-blob-c {
+  animation: drift-c 30s ease-in-out infinite;
+}
+
+.house-outline {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: draw-line 2.4s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-float,
+  .animate-pulse-glow,
+  .ambient-blob-a,
+  .ambient-blob-b,
+  .ambient-blob-c,
+  .house-outline {
+    animation: none !important;
+  }
 }
