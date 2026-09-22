@@ -343,3 +343,59 @@ no matching Next.js route), and the guest stay-page links generated in
 non-interactive shell), and re-ran the Playwright network trace:
 `document.readyState: complete`, 0 pending requests. The live site now
 actually finishes loading.
+
+### 2026-09-22 - working tree
+Several rounds, not individually logged as they happened — catching up now:
+
+**Dropped OpenAI, switched to Gemini.** The host has no OpenAI billing
+set up (confirmed `insufficient_quota` earlier), so every import/answer/
+learn call was permanently broken. Google AI Studio issues a free API
+key with no card required, and Gemini exposes an OpenAI-compatible
+`/v1beta/openai/chat/completions` endpoint, so `convex/importListing.ts`,
+`answerQuestion.ts`, and `learn.ts`'s direct `fetch` calls were routed
+through a new shared `convex/lib/llm.ts` (`chatJSON()`), configurable via
+`LLM_API_KEY`/`LLM_BASE_URL`/`LLM_MODEL` env vars instead of hardcoded to
+OpenAI. Verified live: import → Gemini extraction → listing created,
+end to end. Also hit and fixed a real free-tier issue: Gemini's
+`gemini-3.6-flash` returns transient 429/503 "high demand" errors fairly
+often (reproduced directly with curl — failed once, succeeded on retry
+seconds later), so `chatJSON()` now retries up to 4 times with backoff
+on those two statuses before surfacing an error.
+
+**Full visual redesign.** The UI was plain zinc/black Tailwind defaults.
+Rebuilt as a warm "house-listing" theme: Fraunces/Inter font pairing,
+a cream/clay/sage/amber color system, rounded card surfaces with soft
+shadows, a reused house-mark icon, fade-up/stagger/hover-lift animations
+and shimmering skeleton loaders (including two spots where the redesign
+had accidentally left the loading state rendering nothing — caught and
+fixed with proper skeletons). Added a shared `AmbientBackground`
+component (fixed, slow-drifting blurred warm gradient blobs + paper
+grain + a house-silhouette that draws itself in on the dashboard) as a
+lightweight stand-in for a literal background video, since generating
+or sourcing an actual video file isn't something this session can do —
+flagged that substitution to the host rather than silently doing
+something else. Added a concrete one-line tagline and a new
+`/how-it-works` page walking through the full loop in detail.
+
+**Closed several one-way doors in the core loop.** Learned/seeded facts
+(`faqs` table) were counted but never listed or removable; added a
+"Things Housefile knows" section with per-fact delete. "Extra" private
+facts could be added but not removed; added `listings.removePrivateFact`.
+There was no way to delete a bad/test listing at all; added
+`listings.remove`, cascading its faqs/stays/drafts/opsMessages/inbox
+row. The guest stay page's "need something else" section always said
+"message your host on Airbnb" even when a real AgentMail inbox existed;
+it now shows the actual address with a `mailto:` link. Added a small
+copy-to-clipboard control for the stay link and inbox address.
+
+Also flipped stay-page links (host dashboard → guest page) from
+`target="_blank"` back to same-tab per host feedback, adding a
+`window.history.back()` "← Back" control on the guest page instead.
+
+Every round rebuilt, typechecked (`tsc --noEmit`), deployed via
+`npx convex deploy -y` + `npx @convex-dev/static-hosting deploy
+--skip-convex --dist ./out`, and spot-checked live — either via a
+Playwright screenshot when this sandbox's flaky connectivity to
+`convex.site` cooperated, or by grepping the deployed JS bundle for the
+new code's literal strings when it didn't (curl to this domain has been
+reliable throughout; this sandbox's own Chromium has not).
