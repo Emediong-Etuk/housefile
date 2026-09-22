@@ -44,7 +44,15 @@ function StayPageInner() {
 
   return (
     <Shell>
-      <div className="animate-fade-up text-center">
+      <button
+        type="button"
+        onClick={() => window.history.back()}
+        className="link-underline animate-fade-up inline-flex items-center gap-1 text-sm text-taupe transition hover:text-ink"
+      >
+        ← Back
+      </button>
+
+      <div className="animate-fade-up mt-6 text-center" style={{ animationDelay: "40ms" }}>
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-clay text-paper shadow-soft">
           <HouseIcon className="h-6 w-6" />
         </div>

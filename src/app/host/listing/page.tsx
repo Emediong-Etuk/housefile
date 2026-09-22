@@ -381,8 +381,6 @@ function StaysSection({
           <p className="text-sm font-medium text-sage">Stay page ready</p>
           <a
             href={lastLink}
-            target="_blank"
-            rel="noopener noreferrer"
             className="ml-auto rounded-lg bg-sage px-3 py-1.5 text-sm font-medium text-paper shadow-sm transition hover:brightness-110"
           >
             Open stay page
@@ -403,8 +401,6 @@ function StaysSection({
             </span>
             <a
               href={`/stays/guest.html?slug=${stay.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
               className="rounded-lg border border-sand px-3 py-1.5 text-xs font-medium text-ink transition hover:border-clay hover:text-clay"
             >
               View page
