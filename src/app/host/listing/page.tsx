@@ -323,9 +323,15 @@ function StaysSection({
         </button>
       </form>
       {lastLink && (
-        <p className="mt-2 break-all text-sm text-green-700 dark:text-green-400">
-          Stay page ready: <a className="underline" href={lastLink}>{lastLink}</a>
-        </p>
+        <div className="mt-2 flex items-center gap-3">
+          <p className="text-sm text-green-700 dark:text-green-400">Stay page ready</p>
+          <a
+            href={lastLink}
+            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Open stay page
+          </a>
+        </div>
       )}
 
       <ul className="mt-4 space-y-2">
