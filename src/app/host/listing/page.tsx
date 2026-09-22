@@ -122,7 +122,7 @@ function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
         <button
           type="button"
           onClick={() => setConfirmOpen(true)}
-          className="text-xs font-medium text-taupe-light transition hover:text-clay-dark"
+          className="rounded-lg bg-clay px-3 py-1.5 text-xs font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-clay-light"
         >
           Delete property
         </button>
@@ -240,7 +240,7 @@ function CompleteFactsForm({
               <button
                 type="button"
                 onClick={() => void removePrivateFact({ listingId, field: key })}
-                className="shrink-0 text-xs text-taupe-light transition hover:text-clay-dark"
+                className="shrink-0 rounded-xl border border-sand px-3 py-1.5 text-xs font-medium text-ink transition hover:border-clay hover:text-clay"
               >
                 Remove
               </button>
