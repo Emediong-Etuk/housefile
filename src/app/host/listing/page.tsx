@@ -346,7 +346,12 @@ function StaysSection({
               {stay.guestFirstName} · {new Date(stay.checkIn).toLocaleDateString()}–
               {new Date(stay.checkOut).toLocaleDateString()}
             </span>
-            <a href={`/stays/guest.html?slug=${stay.slug}`} className="text-zinc-500 underline hover:text-zinc-900 dark:hover:text-zinc-100">
+            <a
+              href={`/stays/guest.html?slug=${stay.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-500"
+            >
               View page
             </a>
           </li>
