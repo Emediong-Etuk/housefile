@@ -399,3 +399,29 @@ Playwright screenshot when this sandbox's flaky connectivity to
 `convex.site` cooperated, or by grepping the deployed JS bundle for the
 new code's literal strings when it didn't (curl to this domain has been
 reliable throughout; this sandbox's own Chromium has not).
+
+### 2026-09-22 - working tree (continued)
+Host reported "Teach Housefile" taking too long / appearing stuck.
+Also caught a real bug while investigating: `DraftCard`'s teach button
+had no `catch` at all — a rejected `proposePatch` call went unhandled,
+so a genuine failure looked identical to "still working" until the
+button silently flipped back with zero feedback. Added a `teachError`
+state and now shows the actual message, matching the pattern already
+used for send/import errors elsewhere on the page.
+
+Root-caused the slowness itself by hitting the Gemini endpoint
+directly rather than guessing: `gemini-3.6-flash` (the default set
+when OpenAI was dropped) is a "thinking" model — the same prompt used
+~470 total tokens against it vs ~190 on a plain model, all hidden
+reasoning overhead — and it returned 429 "quota exceeded" on 4 of 5
+consecutive calls in one direct test, likely from this session's own
+heavy curl testing plus retries compounding within the same per-minute
+quota window. Tried `reasoning_effort: "minimal"` first (cut latency
+roughly in half) but the quota errors persisted regardless of effort
+level, so it was a model choice problem, not a tuning one. Switched
+the default to `gemini-flash-lite-latest`: 6/6 back-to-back calls
+succeeded with zero rate-limit errors, consistently under ~2.5s, and
+equally correct structured JSON for these extraction/classification
+prompts, which never needed deep reasoning. Retry count stayed at 5
+as cheap insurance for whatever load the free tier is actually under
+at demo time.
