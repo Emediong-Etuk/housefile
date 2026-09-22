@@ -7,6 +7,16 @@ import { env } from "../_generated/server";
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 const DEFAULT_MODEL = "gemini-3.6-flash";
 
+// Free-tier Gemini returns 429/503 under load fairly often — transient, not
+// a real failure. Retry a few times with backoff before surfacing an error.
+const RETRYABLE_STATUS = new Set([429, 503]);
+const MAX_ATTEMPTS = 4;
+const BASE_DELAY_MS = 500;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function chatJSON(
   messages: { role: "system" | "user"; content: string }[],
 ): Promise<string> {
@@ -16,21 +26,29 @@ export async function chatJSON(
   const baseUrl = env.LLM_BASE_URL ?? DEFAULT_BASE_URL;
   const model = env.LLM_MODEL ?? DEFAULT_MODEL;
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.LLM_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      response_format: { type: "json_object" },
-      messages,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`LLM call failed (${res.status}): ${await res.text()}`);
+  let lastError = "";
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.LLM_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        response_format: { type: "json_object" },
+        messages,
+      }),
+    });
+    if (res.ok) {
+      const json = (await res.json()) as { choices: { message: { content: string } }[] };
+      return json.choices[0]?.message.content ?? "{}";
+    }
+    lastError = `LLM call failed (${res.status}): ${await res.text()}`;
+    if (!RETRYABLE_STATUS.has(res.status) || attempt === MAX_ATTEMPTS) {
+      throw new Error(lastError);
+    }
+    await sleep(BASE_DELAY_MS * 2 ** (attempt - 1));
   }
-  const json = (await res.json()) as { choices: { message: { content: string } }[] };
-  return json.choices[0]?.message.content ?? "{}";
+  throw new Error(lastError);
 }
