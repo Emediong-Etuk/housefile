@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { action, env } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { chatJSON } from "./lib/llm";
+import { verificationCodeFor } from "./lib/verificationCode";
 
 function classifyPlatform(url: string): "airbnb" | "vrbo" | "other" {
   if (url.includes("airbnb.")) return "airbnb";
@@ -52,6 +53,13 @@ async function extractSeed(markdown: string) {
 // with Firecrawl, has the LLM turn it into a structured seed, and creates
 // the listing. The listing is a seed, never the source of truth — the
 // host still has to complete the private facts before it's guest ready.
+//
+// Ownership check: Airbnb/Vrbo have no public API for verifying who
+// manages a listing, so import requires the host to paste a code unique
+// to (them, this URL) into the listing's own description first — the same
+// pattern site-verification tools use (a code only someone with edit
+// access to the real page could place there). Firecrawl's scrape has to
+// actually contain it or the import is refused.
 export const run = action({
   args: {
     hostId: v.string(),
@@ -68,6 +76,16 @@ export const run = action({
       args.sourceUrl,
       env.FIRECRAWL_API_KEY,
     );
+
+    const code = verificationCodeFor(args.hostId, args.sourceUrl);
+    if (!markdown.includes(code)) {
+      throw new Error(
+        `Couldn't find your verification code (${code}) on this listing yet. ` +
+          "Add it anywhere in the listing's description on Airbnb/Vrbo, save your changes there, " +
+          "then try importing again — it can take the platform a minute to show the update.",
+      );
+    }
+
     const seed = await extractSeed(markdown);
 
     const name =
