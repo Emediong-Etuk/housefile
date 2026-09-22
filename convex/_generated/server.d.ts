@@ -32,8 +32,9 @@ type Env = {
   readonly CONVEX_SITE_URL: string;
   readonly AGENTMAIL_API_KEY: string | undefined;
   readonly FIRECRAWL_API_KEY: string | undefined;
-  readonly OPENAI_API_KEY: string | undefined;
-  readonly OPENAI_MODEL: string | undefined;
+  readonly LLM_API_KEY: string | undefined;
+  readonly LLM_BASE_URL: string | undefined;
+  readonly LLM_MODEL: string | undefined;
 };
 
 /**

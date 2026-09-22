@@ -16,6 +16,7 @@ import type * as faqs from "../faqs.js";
 import type * as http from "../http.js";
 import type * as importListing from "../importListing.js";
 import type * as learn from "../learn.js";
+import type * as lib_llm from "../lib/llm.js";
 import type * as lib_svix from "../lib/svix.js";
 import type * as listings from "../listings.js";
 import type * as opsMessages from "../opsMessages.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   importListing: typeof importListing;
   learn: typeof learn;
+  "lib/llm": typeof lib_llm;
   "lib/svix": typeof lib_svix;
   listings: typeof listings;
   opsMessages: typeof opsMessages;

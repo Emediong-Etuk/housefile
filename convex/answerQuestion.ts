@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { action, env } from "./_generated/server";
+import { action } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { chatJSON } from "./lib/llm";
 
 const SYSTEM_PROMPT = `You answer guest questions for a short-term rental using ONLY the
 "known facts" JSON you are given. Every claim in your reply must be
@@ -80,12 +81,6 @@ export const run = action({
   },
   returns: v.id("drafts"),
   handler: async (ctx, args) => {
-    if (!env.OPENAI_API_KEY) {
-      throw new Error(
-        "OPENAI_API_KEY is not set. Run `npx convex env set OPENAI_API_KEY <key>`.",
-      );
-    }
-
     const listing = await ctx.runQuery(api.listings.get, { listingId: args.listingId });
     if (!listing) throw new Error("Listing not found");
 
@@ -108,33 +103,18 @@ export const run = action({
 
     const learnedFaqs = faqs.map((f) => ({ field: `faq.${f._id}`, question: f.q, answer: f.a }));
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+    const content = await chatJSON([
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: JSON.stringify({
+          knownFacts,
+          previouslyAnsweredQuestions: learnedFaqs,
+          guestQuestion: args.inboundText,
+        }),
       },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL ?? "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: JSON.stringify({
-              knownFacts,
-              previouslyAnsweredQuestions: learnedFaqs,
-              guestQuestion: args.inboundText,
-            }),
-          },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(`OpenAI grounded-answer call failed (${res.status}): ${await res.text()}`);
-    }
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const grounded = parseGroundedResponse(json.choices[0]?.message.content ?? "{}");
+    ]);
+    const grounded = parseGroundedResponse(content);
 
     const draftId: Id<"drafts"> = await ctx.runMutation(internal.drafts.create, {
       listingId: args.listingId,

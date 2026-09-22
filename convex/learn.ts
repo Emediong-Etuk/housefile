@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { action, env } from "./_generated/server";
+import { action } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import { chatJSON } from "./lib/llm";
 
 const FIELD_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*$/;
 
@@ -14,7 +15,7 @@ function slugifyFieldKey(text: string): string {
   return FIELD_KEY_PATTERN.test(camel) ? camel : `fact${Date.now()}`;
 }
 
-// Learn → the host answers a question the property couldn't. OpenAI turns
+// Learn → the host answers a question the property couldn't. The LLM turns
 // that freeform answer into a proposed property-file patch (reusing an
 // existing fact key when the host is correcting one, or naming a short
 // new one). The host still has to approve it (drafts.approveLearnedPatch)
@@ -26,12 +27,6 @@ export const proposePatch = action({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (!env.OPENAI_API_KEY) {
-      throw new Error(
-        "OPENAI_API_KEY is not set. Run `npx convex env set OPENAI_API_KEY <key>`.",
-      );
-    }
-
     const draft = await ctx.runQuery(internal.drafts.getInternal, { draftId: args.draftId });
     if (!draft) throw new Error("Draft not found");
 
@@ -40,40 +35,25 @@ export const proposePatch = action({
 
     const existingKeys = Object.keys(listing.privateFacts ?? {});
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+    const content = await chatJSON([
+      {
+        role: "system",
+        content:
+          'A guest asked a short-term-rental host a question the property file could not answer. The host has now answered it in their own words. Turn that into one new permanent fact.\n\n' +
+          'Reuse one of the existing fact keys if the host is correcting or restating it; otherwise invent a short new camelCase key with no spaces or dots (e.g. "hairDryerLocation", not "hidden_items.hair_dryer").\n\n' +
+          'Write "value" as a short, guest-facing fact in the host\'s own words — do not add anything the host did not say.\n\n' +
+          'Respond with a single JSON object: { "field": string, "value": string, "rationale": string }.',
       },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL ?? "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              'A guest asked a short-term-rental host a question the property file could not answer. The host has now answered it in their own words. Turn that into one new permanent fact.\n\n' +
-              'Reuse one of the existing fact keys if the host is correcting or restating it; otherwise invent a short new camelCase key with no spaces or dots (e.g. "hairDryerLocation", not "hidden_items.hair_dryer").\n\n' +
-              'Write "value" as a short, guest-facing fact in the host\'s own words — do not add anything the host did not say.\n\n' +
-              'Respond with a single JSON object: { "field": string, "value": string, "rationale": string }.',
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              existingFactKeys: existingKeys,
-              guestQuestion: draft.inboundText,
-              hostAnswer: args.hostAnswer,
-            }),
-          },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(`OpenAI patch proposal failed (${res.status}): ${await res.text()}`);
-    }
-    const json = (await res.json()) as { choices: { message: { content: string } }[] };
-    const parsed = JSON.parse(json.choices[0]?.message.content ?? "{}") as {
+      {
+        role: "user",
+        content: JSON.stringify({
+          existingFactKeys: existingKeys,
+          guestQuestion: draft.inboundText,
+          hostAnswer: args.hostAnswer,
+        }),
+      },
+    ]);
+    const parsed = JSON.parse(content) as {
       field?: string;
       value?: string;
       rationale?: string;
