@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import schema from "./schema";
-import { verificationCodeFor } from "./lib/verificationCode";
 
 // Facts a listing must have before it is "guest ready" — the private
 // information a public listing can never reliably provide.
@@ -26,18 +25,6 @@ export const get = query({
   returns: v.union(schema.doc("listings"), v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get("listings", args.listingId);
-  },
-});
-
-// The code a host must paste into their own listing's description before
-// import will accept it — shown up front so they can add it before ever
-// clicking Import. Pure function of (hostId, sourceUrl); no DB access
-// needed, and importListing.run recomputes the identical value to check.
-export const getVerificationCode = query({
-  args: { hostId: v.string(), sourceUrl: v.string() },
-  returns: v.string(),
-  handler: async (_ctx, args) => {
-    return verificationCodeFor(args.hostId, args.sourceUrl);
   },
 });
 

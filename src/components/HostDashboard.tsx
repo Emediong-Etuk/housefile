@@ -5,7 +5,6 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { getOrCreateHostId } from "@/lib/hostId";
 import { HouseIcon, HouseOutline } from "@/components/icons";
-import { CopyButton } from "@/components/CopyButton";
 
 export function HostDashboard() {
   const [hostId, setHostId] = useState<string | null>(null);
@@ -17,12 +16,6 @@ export function HostDashboard() {
   const [url, setUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const showCode = hostId && url.trim().includes(".");
-  const verificationCode = useQuery(
-    api.listings.getVerificationCode,
-    showCode ? { hostId, sourceUrl: url.trim() } : "skip",
-  );
 
   async function handleImport(e: React.FormEvent) {
     e.preventDefault();
@@ -82,24 +75,6 @@ export function HostDashboard() {
             {importing ? "Importing…" : "Import listing"}
           </button>
         </form>
-
-        {showCode && verificationCode && (
-          <div className="animate-fade-in mt-3 rounded-2xl border border-sand bg-paper/70 p-4 text-sm">
-            <p className="font-medium text-ink">Prove you manage this listing</p>
-            <p className="mt-1 text-taupe">
-              Paste this code anywhere in the listing&apos;s description on Airbnb/Vrbo and save it
-              there. Housefile only imports once it can actually find the code on the live page —
-              that&apos;s how it knows this is really your listing.
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="rounded-md bg-clay-light px-2 py-1 font-mono text-xs text-clay-dark">
-                {verificationCode}
-              </code>
-              <CopyButton value={verificationCode} />
-            </div>
-          </div>
-        )}
-
         {error && (
           <p className="animate-fade-in mt-2 text-sm text-clay-dark" role="alert">
             {error}
