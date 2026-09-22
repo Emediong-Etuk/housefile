@@ -564,6 +564,7 @@ function DraftCard({ draft, delay = 0 }: { draft: Doc<"drafts">; delay?: number 
   const [editedReply, setEditedReply] = useState(draft.reply);
   const [hostAnswer, setHostAnswer] = useState("");
   const [teaching, setTeaching] = useState(false);
+  const [teachError, setTeachError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
@@ -641,8 +642,15 @@ function DraftCard({ draft, delay = 0 }: { draft: Doc<"drafts">; delay?: number 
             disabled={!hostAnswer || teaching}
             onClick={async () => {
               setTeaching(true);
+              setTeachError(null);
               try {
                 await proposePatch({ draftId: draft._id, hostAnswer });
+              } catch (err) {
+                setTeachError(
+                  err instanceof Error
+                    ? err.message
+                    : "Couldn't teach Housefile — the model may be overloaded, try again.",
+                );
               } finally {
                 setTeaching(false);
               }
@@ -651,6 +659,7 @@ function DraftCard({ draft, delay = 0 }: { draft: Doc<"drafts">; delay?: number 
           >
             {teaching ? "Teaching…" : "Teach Housefile"}
           </button>
+          {teachError && <p className="mt-1 text-xs text-clay-dark">{teachError}</p>}
         </div>
       )}
 

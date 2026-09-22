@@ -9,9 +9,11 @@ const DEFAULT_MODEL = "gemini-3.6-flash";
 
 // Free-tier Gemini returns 429/503 under load fairly often — transient, not
 // a real failure. Retry a few times with backoff before surfacing an error.
+// Empirically ~2 of every 3 calls hit 503 right now, so 4 attempts still had
+// a real chance of exhausting themselves — bumped to 5.
 const RETRYABLE_STATUS = new Set([429, 503]);
-const MAX_ATTEMPTS = 4;
-const BASE_DELAY_MS = 500;
+const MAX_ATTEMPTS = 5;
+const BASE_DELAY_MS = 400;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -37,6 +39,12 @@ export async function chatJSON(
       body: JSON.stringify({
         model,
         response_format: { type: "json_object" },
+        // Gemini 3's "thinking" mode adds real latency for these tasks
+        // (extraction/classification, not deep reasoning) — asking for
+        // minimal effort roughly halves response time when it doesn't hit
+        // the free-tier overload above. Harmless if a future provider
+        // ignores the field.
+        reasoning_effort: "minimal",
         messages,
       }),
     });
