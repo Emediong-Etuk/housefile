@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, internalMutation, internalQuery } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import schema from "./schema";
 
 export const listByListing = query({
@@ -42,6 +42,18 @@ export const add = internalMutation({
       source: args.source,
       uses: 0,
     });
+  },
+});
+
+// Lets a host remove a piece of learned/seeded knowledge that's wrong or
+// no longer applies — the review side of the teach loop, which previously
+// only had a one-way "add" with no way to see or undo what was learned.
+export const remove = mutation({
+  args: { faqId: v.id("faqs") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.delete("faqs", args.faqId);
+    return null;
   },
 });
 

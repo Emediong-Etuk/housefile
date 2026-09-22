@@ -98,6 +98,71 @@ export const updatePrivateFacts = mutation({
   },
 });
 
+// Removes one private fact the host previously entered — e.g. an "extra
+// fact" added by mistake. The five REQUIRED_FACTS fields aren't removable
+// this way since the form always resubmits them (even as ""), which is
+// exactly what should put them back on the "missing" list.
+export const removePrivateFact = mutation({
+  args: {
+    listingId: v.id("listings"),
+    field: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const listing = await ctx.db.get("listings", args.listingId);
+    if (!listing) throw new Error("Listing not found");
+    const privateFacts = { ...(listing.privateFacts ?? {}) };
+    delete privateFacts[args.field];
+    const { missing, ready } = computeReadiness(privateFacts);
+    await ctx.db.patch("listings", args.listingId, {
+      privateFacts,
+      readinessMissing: [...missing],
+      readinessReady: ready,
+    });
+    return null;
+  },
+});
+
+// Deletes a listing and everything scoped to it — there was previously no
+// way to remove a bad or test import short of leaving it in the dashboard
+// forever.
+export const remove = mutation({
+  args: { listingId: v.id("listings") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const [faqs, stays, drafts, opsMessages, inbox] = await Promise.all([
+      ctx.db
+        .query("faqs")
+        .withIndex("by_listing", (q) => q.eq("listingId", args.listingId))
+        .collect(),
+      ctx.db
+        .query("stays")
+        .withIndex("by_listing", (q) => q.eq("listingId", args.listingId))
+        .collect(),
+      ctx.db
+        .query("drafts")
+        .withIndex("by_listing", (q) => q.eq("listingId", args.listingId))
+        .collect(),
+      ctx.db
+        .query("opsMessages")
+        .withIndex("by_listing", (q) => q.eq("listingId", args.listingId))
+        .collect(),
+      ctx.db
+        .query("agentmailInboxes")
+        .withIndex("by_listing", (q) => q.eq("listingId", args.listingId))
+        .unique(),
+    ]);
+    for (const faq of faqs) await ctx.db.delete("faqs", faq._id);
+    for (const stay of stays) await ctx.db.delete("stays", stay._id);
+    for (const draft of drafts) await ctx.db.delete("drafts", draft._id);
+    for (const message of opsMessages) await ctx.db.delete("opsMessages", message._id);
+    if (inbox) await ctx.db.delete("agentmailInboxes", inbox._id);
+
+    await ctx.db.delete("listings", args.listingId);
+    return null;
+  },
+});
+
 // Applied once a host approves a proposed patch from a flagged draft —
 // this is the "Learn" step: a guest question the property couldn't
 // answer becomes a permanent fact.

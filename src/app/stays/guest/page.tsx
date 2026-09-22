@@ -25,6 +25,10 @@ function StayPageInner() {
   const stay = useQuery(api.stays.getBySlug, { slug });
   const listing = useQuery(api.listings.get, stay ? { listingId: stay.listingId } : "skip");
   const faqs = useQuery(api.faqs.listByListing, stay ? { listingId: stay.listingId } : "skip");
+  const inbox = useQuery(
+    api.agentmailInboxes.getAddressByListing,
+    stay ? { listingId: stay.listingId } : "skip",
+  );
 
   if (stay === undefined || listing === undefined) {
     return <Shell><LoadingSkeleton /></Shell>;
@@ -113,7 +117,17 @@ function StayPageInner() {
         </Section>
 
         <Section title="Need something else?" icon={<MessageIcon />} delay={260}>
-          <p className="text-taupe">Message your host on Airbnb.</p>
+          {inbox ? (
+            <p className="text-taupe">
+              Email{" "}
+              <a href={`mailto:${inbox.address}`} className="font-mono text-clay-dark underline">
+                {inbox.address}
+              </a>{" "}
+              — your host gets a drafted answer instantly.
+            </p>
+          ) : (
+            <p className="text-taupe">Message your host on Airbnb.</p>
+          )}
         </Section>
       </div>
     </Shell>

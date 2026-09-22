@@ -6,6 +6,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { HouseIcon } from "@/components/icons";
+import { CopyButton } from "@/components/CopyButton";
 
 const REQUIRED_FACT_FIELDS: { key: string; label: string; placeholder: string }[] = [
   { key: "wifiName", label: "Wi-Fi name", placeholder: "OakHouse" },
@@ -45,6 +46,7 @@ function ListingPageInner() {
       <EmailInboxSection listingId={listingId} />
       <StaysSection listingId={listingId} stays={stays} />
       <InboxSection listingId={listingId} stays={stays} drafts={drafts} faqCount={faqs?.length ?? 0} />
+      <KnowledgeSection faqs={faqs} />
     </PageShell>
   );
 }
@@ -92,14 +94,44 @@ function SectionCard({
 }
 
 function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
+  const removeListing = useMutation(api.listings.remove);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (
+      !window.confirm(
+        `Delete "${listing.name}"? This removes its facts, stays, and inbox — guest links will stop working.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await removeListing({ listingId: listing._id });
+      window.location.href = "/host.html";
+    } catch {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="animate-fade-up">
-      <a
-        href="/host.html"
-        className="link-underline inline-flex items-center gap-1 text-sm text-taupe transition hover:text-ink"
-      >
-        ← All properties
-      </a>
+      <div className="flex items-center justify-between">
+        <a
+          href="/host.html"
+          className="link-underline inline-flex items-center gap-1 text-sm text-taupe transition hover:text-ink"
+        >
+          ← All properties
+        </a>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          disabled={deleting}
+          className="text-xs font-medium text-taupe-light transition hover:text-clay-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete property"}
+        </button>
+      </div>
       <div className="mt-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-clay text-paper shadow-soft">
@@ -131,6 +163,7 @@ function CompleteFactsForm({
   listing: Doc<"listings">;
 }) {
   const updatePrivateFacts = useMutation(api.listings.updatePrivateFacts);
+  const removePrivateFact = useMutation(api.listings.removePrivateFact);
   const facts = listing.privateFacts ?? {};
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(REQUIRED_FACT_FIELDS.map((f) => [f.key, String(facts[f.key] ?? "")])),
@@ -196,8 +229,17 @@ function CompleteFactsForm({
       {extraFacts.length > 0 && (
         <ul className="mt-5 space-y-1.5 border-t border-sand pt-4 text-sm">
           {extraFacts.map(([key, value]) => (
-            <li key={key} className="text-taupe">
-              <span className="font-medium text-ink">{key}:</span> {String(value)}
+            <li key={key} className="flex items-start justify-between gap-3 text-taupe">
+              <span>
+                <span className="font-medium text-ink">{key}:</span> {String(value)}
+              </span>
+              <button
+                type="button"
+                onClick={() => void removePrivateFact({ listingId, field: key })}
+                className="shrink-0 text-xs text-taupe-light transition hover:text-clay-dark"
+              >
+                Remove
+              </button>
             </li>
           ))}
         </ul>
@@ -278,13 +320,16 @@ function EmailInboxSection({ listingId }: { listingId: Id<"listings"> }) {
         </div>
       )}
       {inbox && (
-        <p className="text-sm text-taupe">
-          Guests can email{" "}
-          <span className="rounded-md bg-clay-light px-1.5 py-0.5 font-mono text-xs text-clay-dark">
-            {inbox.address}
-          </span>{" "}
-          — replies you approve below are sent from there automatically.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-taupe">
+            Guests can email{" "}
+            <span className="rounded-md bg-clay-light px-1.5 py-0.5 font-mono text-xs text-clay-dark">
+              {inbox.address}
+            </span>{" "}
+            — replies you approve below are sent from there automatically.
+          </p>
+          <CopyButton value={inbox.address} />
+        </div>
       )}
     </SectionCard>
   );
@@ -377,14 +422,20 @@ function StaysSection({
         </button>
       </form>
       {lastLink && (
-        <div className="animate-scale-in mt-3 flex items-center gap-3 rounded-xl bg-sage-bg px-4 py-3">
+        <div className="animate-scale-in mt-3 flex items-center gap-2 rounded-xl bg-sage-bg px-4 py-3">
           <p className="text-sm font-medium text-sage">Stay page ready</p>
-          <a
-            href={lastLink}
-            className="ml-auto rounded-lg bg-sage px-3 py-1.5 text-sm font-medium text-paper shadow-sm transition hover:brightness-110"
-          >
-            Open stay page
-          </a>
+          <div className="ml-auto flex items-center gap-2">
+            <CopyButton
+              value={lastLink}
+              className="rounded-lg border border-sage/30 px-2.5 py-1.5 text-xs font-medium text-sage transition hover:bg-sage/10"
+            />
+            <a
+              href={lastLink}
+              className="rounded-lg bg-sage px-3 py-1.5 text-sm font-medium text-paper shadow-sm transition hover:brightness-110"
+            >
+              Open stay page
+            </a>
+          </div>
         </div>
       )}
 
@@ -614,5 +665,62 @@ function DraftCard({ draft, delay = 0 }: { draft: Doc<"drafts">; delay?: number 
         </div>
       )}
     </div>
+  );
+}
+
+const SOURCE_LABEL: Record<Doc<"faqs">["source"], string> = {
+  seed: "From listing",
+  host: "From host",
+  learned: "Learned",
+};
+
+// The review side of the teach loop — everything Housefile has learned
+// (from the import seed, or taught by the host) was previously only
+// visible as a count on the Inbox card, with no way to see or correct it.
+function KnowledgeSection({ faqs }: { faqs: Doc<"faqs">[] | undefined }) {
+  const removeFaq = useMutation(api.faqs.remove);
+
+  return (
+    <SectionCard
+      title="Things Housefile knows"
+      subtitle="Every fact guests can be answered from — remove anything wrong or outdated."
+      delay={300}
+    >
+      {faqs === undefined && (
+        <div className="space-y-2">
+          <div className="skeleton h-14 w-full" />
+          <div className="skeleton h-14 w-full" />
+        </div>
+      )}
+      {faqs?.length === 0 && (
+        <p className="text-sm text-taupe">
+          Nothing learned yet — teach Housefile by answering a flagged question above.
+        </p>
+      )}
+      <ul className="space-y-2">
+        {faqs?.map((faq, i) => (
+          <li
+            key={faq._id}
+            className="animate-fade-up flex items-start justify-between gap-3 rounded-xl border border-sand px-4 py-3 text-sm"
+            style={{ animationDelay: `${i * 40}ms` }}
+          >
+            <div>
+              <p className="font-medium text-ink">{faq.q}</p>
+              <p className="mt-0.5 text-taupe">{faq.a}</p>
+              <span className="mt-1 inline-block rounded-full bg-cream px-2 py-0.5 text-xs text-taupe-light">
+                {SOURCE_LABEL[faq.source]}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void removeFaq({ faqId: faq._id })}
+              className="shrink-0 text-xs text-taupe-light transition hover:text-clay-dark"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
