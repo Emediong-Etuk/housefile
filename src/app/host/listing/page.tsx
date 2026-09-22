@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
+import { HouseIcon } from "@/components/icons";
 
 const REQUIRED_FACT_FIELDS: { key: string; label: string; placeholder: string }[] = [
   { key: "wifiName", label: "Wi-Fi name", placeholder: "OakHouse" },
@@ -16,7 +17,7 @@ const REQUIRED_FACT_FIELDS: { key: string; label: string; placeholder: string }[
 
 export default function ListingPage() {
   return (
-    <Suspense fallback={<PageShell>Loading…</PageShell>}>
+    <Suspense fallback={<PageShell><LoadingSkeleton /></PageShell>}>
       <ListingPageInner />
     </Suspense>
   );
@@ -34,7 +35,7 @@ function ListingPageInner() {
   const stays = useQuery(api.stays.listByListing, { listingId });
   const drafts = useQuery(api.drafts.listByListing, { listingId });
 
-  if (listing === undefined) return <PageShell>Loading…</PageShell>;
+  if (listing === undefined) return <PageShell><LoadingSkeleton /></PageShell>;
   if (listing === null) return <PageShell>Listing not found.</PageShell>;
 
   return (
@@ -48,34 +49,76 @@ function ListingPageInner() {
   );
 }
 
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="skeleton h-9 w-2/3" />
+      <div className="skeleton h-40 w-full" />
+      <div className="skeleton h-24 w-full" />
+      <div className="skeleton h-40 w-full" />
+    </div>
+  );
+}
+
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto min-h-full max-w-2xl space-y-10 px-4 py-10 text-zinc-900 dark:text-zinc-50">
-      {children}
+    <div className="grain-backdrop min-h-full">
+      <div className="mx-auto max-w-2xl space-y-12 px-6 py-12 text-ink">{children}</div>
     </div>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  children,
+  delay = 0,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <section
+      className="animate-fade-up rounded-2xl border border-sand bg-paper p-6 shadow-soft"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <h2 className="font-serif text-xl font-medium text-ink">{title}</h2>
+      {subtitle && <p className="mt-1 text-sm text-taupe">{subtitle}</p>}
+      <div className="mt-4">{children}</div>
+    </section>
   );
 }
 
 function ListingHeader({ listing }: { listing: Doc<"listings"> }) {
   return (
-    <div>
-      <a href="/host.html" className="text-sm text-zinc-500 hover:underline">
+    <div className="animate-fade-up">
+      <a
+        href="/host.html"
+        className="link-underline inline-flex items-center gap-1 text-sm text-taupe transition hover:text-ink"
+      >
         ← All properties
       </a>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{listing.name}</h1>
+      <div className="mt-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-clay text-paper shadow-soft">
+            <HouseIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">{listing.name}</h1>
+            {listing.locationText && <p className="mt-0.5 text-sm text-taupe">{listing.locationText}</p>}
+          </div>
+        </div>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-            listing.readinessReady
-              ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-              : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+            listing.readinessReady ? "bg-sage-bg text-sage" : "bg-honey-bg text-honey"
           }`}
         >
           {listing.readinessReady ? "Guest ready" : `${listing.readinessMissing.length} facts missing`}
         </span>
       </div>
-      {listing.locationText && <p className="mt-1 text-sm text-zinc-500">{listing.locationText}</p>}
-      <p className="mt-1 text-xs text-zinc-400">Imported from {listing.sourceUrl}</p>
+      <p className="mt-2 truncate text-xs text-taupe-light">Imported from {listing.sourceUrl}</p>
     </div>
   );
 }
@@ -93,6 +136,7 @@ function CompleteFactsForm({
     Object.fromEntries(REQUIRED_FACT_FIELDS.map((f) => [f.key, String(facts[f.key] ?? "")])),
   );
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [extraLabel, setExtraLabel] = useState("");
   const [extraValue, setExtraValue] = useState("");
 
@@ -100,6 +144,8 @@ function CompleteFactsForm({
     setSaving(true);
     try {
       await updatePrivateFacts({ listingId, patch });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
     } finally {
       setSaving(false);
     }
@@ -110,44 +156,48 @@ function CompleteFactsForm({
   );
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold">Complete your property</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        The listing can&apos;t know these — only you can.
-      </p>
+    <SectionCard
+      title="Complete your property"
+      subtitle="The listing can't know these — only you can."
+      delay={60}
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void save(values);
         }}
-        className="mt-4 space-y-3"
+        className="space-y-3"
       >
         {REQUIRED_FACT_FIELDS.map((f) => (
           <div key={f.key}>
-            <label className="text-xs font-medium text-zinc-500">{f.label}</label>
+            <label className="text-xs font-medium text-taupe">{f.label}</label>
             <input
               value={values[f.key]}
               placeholder={f.placeholder}
               onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm text-ink placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
             />
           </div>
         ))}
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-xl bg-clay px-4 py-2.5 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          {saved && (
+            <span className="animate-fade-in text-sm font-medium text-sage">Saved ✓</span>
+          )}
+        </div>
       </form>
 
       {extraFacts.length > 0 && (
-        <ul className="mt-4 space-y-1 text-sm">
+        <ul className="mt-5 space-y-1.5 border-t border-sand pt-4 text-sm">
           {extraFacts.map(([key, value]) => (
-            <li key={key} className="text-zinc-600 dark:text-zinc-400">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">{key}:</span>{" "}
-              {String(value)}
+            <li key={key} className="text-taupe">
+              <span className="font-medium text-ink">{key}:</span> {String(value)}
             </li>
           ))}
         </ul>
@@ -174,22 +224,22 @@ function CompleteFactsForm({
           placeholder="Another fact (e.g. hair dryer location)"
           value={extraLabel}
           onChange={(e) => setExtraLabel(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="flex-1 rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
         />
         <input
           placeholder="Answer"
           value={extraValue}
           onChange={(e) => setExtraValue(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="flex-1 rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
         />
         <button
           type="submit"
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
+          className="shrink-0 rounded-xl border border-sand px-4 py-2.5 text-sm font-medium text-ink transition hover:border-clay hover:text-clay"
         >
           Add
         </button>
       </form>
-    </section>
+    </SectionCard>
   );
 }
 
@@ -200,12 +250,11 @@ function EmailInboxSection({ listingId }: { listingId: Id<"listings"> }) {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold">Email inbox</h2>
-      {inbox === undefined && <p className="mt-1 text-sm text-zinc-500">Loading…</p>}
+    <SectionCard title="Email inbox" delay={120}>
+      {inbox === undefined && <div className="skeleton h-9 w-40" />}
       {inbox === null && (
-        <div className="mt-2">
-          <p className="text-sm text-zinc-500">
+        <div>
+          <p className="text-sm text-taupe">
             Give guests a dedicated address that drafts answers automatically.
           </p>
           <button
@@ -221,20 +270,23 @@ function EmailInboxSection({ listingId }: { listingId: Id<"listings"> }) {
                 setProvisioning(false);
               }
             }}
-            className="mt-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+            className="mt-3 rounded-xl bg-clay px-4 py-2.5 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {provisioning ? "Setting up…" : "Set up email inbox"}
           </button>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-clay-dark">{error}</p>}
         </div>
       )}
       {inbox && (
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Guests can email <span className="font-mono">{inbox.address}</span> — replies you
-          approve below are sent from there automatically.
+        <p className="text-sm text-taupe">
+          Guests can email{" "}
+          <span className="rounded-md bg-clay-light px-1.5 py-0.5 font-mono text-xs text-clay-dark">
+            {inbox.address}
+          </span>{" "}
+          — replies you approve below are sent from there automatically.
         </p>
       )}
-    </section>
+    </SectionCard>
   );
 }
 
@@ -253,6 +305,9 @@ function StaysSection({
   const [parking, setParking] = useState("");
   const [creating, setCreating] = useState(false);
   const [lastLink, setLastLink] = useState<string | null>(null);
+
+  const inputClass =
+    "rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition";
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -281,55 +336,54 @@ function StaysSection({
   }
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold">Stays</h2>
-      <form onSubmit={handleCreate} className="mt-4 grid grid-cols-2 gap-2">
+    <SectionCard title="Stays" delay={180}>
+      <form onSubmit={handleCreate} className="grid grid-cols-2 gap-2">
         <input
           placeholder="Guest first name"
           value={guestFirstName}
           onChange={(e) => setGuestFirstName(e.target.value)}
-          className="col-span-2 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={`col-span-2 ${inputClass}`}
         />
         <input
           type="date"
           value={checkIn}
           onChange={(e) => setCheckIn(e.target.value)}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
         />
         <input
           type="date"
           value={checkOut}
           onChange={(e) => setCheckOut(e.target.value)}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
         />
         <input
           placeholder="Door code for this stay (optional)"
           value={accessCode}
           onChange={(e) => setAccessCode(e.target.value)}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
         />
         <input
           placeholder="Parking spot for this stay (optional)"
           value={parking}
           onChange={(e) => setParking(e.target.value)}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
         />
         <button
           type="submit"
           disabled={creating}
-          className="col-span-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+          className="col-span-2 rounded-xl bg-clay px-4 py-2.5 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {creating ? "Creating…" : "Create stay page"}
         </button>
       </form>
       {lastLink && (
-        <div className="mt-2 flex items-center gap-3">
-          <p className="text-sm text-green-700 dark:text-green-400">Stay page ready</p>
+        <div className="animate-scale-in mt-3 flex items-center gap-3 rounded-xl bg-sage-bg px-4 py-3">
+          <p className="text-sm font-medium text-sage">Stay page ready</p>
           <a
             href={lastLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="ml-auto rounded-lg bg-sage px-3 py-1.5 text-sm font-medium text-paper shadow-sm transition hover:brightness-110"
           >
             Open stay page
           </a>
@@ -337,12 +391,13 @@ function StaysSection({
       )}
 
       <ul className="mt-4 space-y-2">
-        {stays?.map((stay) => (
+        {stays?.map((stay, i) => (
           <li
             key={stay._id}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+            className="animate-fade-up flex items-center justify-between rounded-xl border border-sand px-4 py-3 text-sm transition hover:border-sand-dark"
+            style={{ animationDelay: `${i * 50}ms` }}
           >
-            <span>
+            <span className="text-ink">
               {stay.guestFirstName} · {new Date(stay.checkIn).toLocaleDateString()}–
               {new Date(stay.checkOut).toLocaleDateString()}
             </span>
@@ -350,14 +405,14 @@ function StaysSection({
               href={`/stays/guest.html?slug=${stay.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-zinc-500"
+              className="rounded-lg border border-sand px-3 py-1.5 text-xs font-medium text-ink transition hover:border-clay hover:text-clay"
             >
               View page
             </a>
           </li>
         ))}
       </ul>
-    </section>
+    </SectionCard>
   );
 }
 
@@ -402,25 +457,24 @@ function InboxSection({
   const resolvedDrafts = drafts?.filter((d) => d.status === "approved" || d.status === "edited") ?? [];
 
   return (
-    <section>
-      <h2 className="text-lg font-semibold">Inbox</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        {resolvedDrafts.length} answered · {faqCount} things Housefile knows
-      </p>
-
-      <form onSubmit={handleAsk} className="mt-4 space-y-2">
+    <SectionCard
+      title="Inbox"
+      subtitle={`${resolvedDrafts.length} answered · ${faqCount} things Housefile knows`}
+      delay={240}
+    >
+      <form onSubmit={handleAsk} className="space-y-2">
         <textarea
           placeholder="What did the guest ask?"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={2}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-full rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
         />
         <div className="flex gap-2">
           <select
             value={stayId}
             onChange={(e) => setStayId(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-sm focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
           >
             <option value="">No specific stay</option>
             {stays?.map((s) => (
@@ -432,24 +486,24 @@ function InboxSection({
           <button
             type="submit"
             disabled={asking}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+            className="rounded-xl bg-clay px-4 py-2.5 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {asking ? "Drafting…" : "Draft answer"}
           </button>
         </div>
       </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-clay-dark">{error}</p>}
 
       <div className="mt-6 space-y-3">
-        {openDrafts.map((draft) => (
-          <DraftCard key={draft._id} draft={draft} />
+        {openDrafts.map((draft, i) => (
+          <DraftCard key={draft._id} draft={draft} delay={i * 60} />
         ))}
       </div>
-    </section>
+    </SectionCard>
   );
 }
 
-function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
+function DraftCard({ draft, delay = 0 }: { draft: Doc<"drafts">; delay?: number }) {
   const approve = useMutation(api.drafts.approve);
   const sendApprovedReply = useAction(api.agentmail.sendApprovedReply);
   const discard = useMutation(api.drafts.discard);
@@ -482,8 +536,11 @@ function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-      <p className="text-sm font-medium">&ldquo;{draft.inboundText}&rdquo;</p>
+    <div
+      className="animate-fade-up rounded-xl border border-sand bg-cream/40 p-4"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <p className="font-serif text-base font-medium text-ink">&ldquo;{draft.inboundText}&rdquo;</p>
 
       {!isFlagged && (
         <>
@@ -491,10 +548,10 @@ function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
             value={editedReply}
             onChange={(e) => setEditedReply(e.target.value)}
             rows={2}
-            className="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-2 w-full rounded-xl border border-sand bg-paper px-3 py-2.5 text-sm focus:border-clay focus:outline-none focus:ring-4 focus:ring-clay-light transition"
           />
           {draft.citations.length > 0 && (
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-taupe-light">
               Grounded by: {draft.citations.map((c) => c.field).join(", ")}
             </p>
           )}
@@ -502,32 +559,32 @@ function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
             <button
               disabled={sending}
               onClick={() => void handleApprove()}
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+              className="rounded-lg bg-clay px-3 py-1.5 text-xs font-medium text-paper shadow-sm transition hover:bg-clay-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isEmail ? (sending ? "Sending…" : "Approve & send") : "Approve"}
             </button>
             <button
               onClick={() => void discard({ draftId: draft._id })}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs dark:border-zinc-700"
+              className="rounded-lg border border-sand px-3 py-1.5 text-xs text-taupe transition hover:border-sand-dark hover:text-ink"
             >
               Discard
             </button>
           </div>
-          {sendError && <p className="mt-1 text-xs text-red-600">{sendError}</p>}
+          {sendError && <p className="mt-1 text-xs text-clay-dark">{sendError}</p>}
         </>
       )}
 
       {isFlagged && !draft.proposedPatch && (
         <div className="mt-2">
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            ⚠ Housefile doesn&apos;t know this yet — {draft.flagReason}
+          <p className="flex items-start gap-1.5 text-xs text-honey">
+            <span aria-hidden="true">⚠</span> Housefile doesn&apos;t know this yet — {draft.flagReason}
           </p>
           <textarea
             placeholder="Answer it here — Housefile will remember it next time."
             value={hostAnswer}
             onChange={(e) => setHostAnswer(e.target.value)}
             rows={2}
-            className="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-2 w-full rounded-xl border border-sand bg-paper px-3 py-2.5 text-sm focus:border-clay focus:outline-none focus:ring-4 focus:ring-clay-light transition"
           />
           <button
             disabled={!hostAnswer || teaching}
@@ -539,7 +596,7 @@ function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
                 setTeaching(false);
               }
             }}
-            className="mt-2 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+            className="mt-2 rounded-lg bg-clay px-3 py-1.5 text-xs font-medium text-paper shadow-sm transition hover:bg-clay-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {teaching ? "Teaching…" : "Teach Housefile"}
           </button>
@@ -547,14 +604,14 @@ function DraftCard({ draft }: { draft: Doc<"drafts"> }) {
       )}
 
       {isFlagged && draft.proposedPatch && (
-        <div className="mt-2 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-          <p className="font-medium">New property knowledge</p>
-          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+        <div className="animate-scale-in mt-2 rounded-xl bg-sage-bg p-3 text-sm">
+          <p className="font-medium text-sage">New property knowledge</p>
+          <p className="mt-1 text-ink/80">
             {draft.proposedPatch.field} → {draft.proposedPatch.value}
           </p>
           <button
             onClick={() => void approveLearnedPatch({ draftId: draft._id })}
-            className="mt-2 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-white dark:text-zinc-900"
+            className="mt-2 rounded-lg bg-sage px-3 py-1.5 text-xs font-medium text-paper shadow-sm transition hover:brightness-110"
           >
             Save to Housefile
           </button>

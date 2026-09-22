@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { getOrCreateHostId } from "@/lib/hostId";
+import { HouseIcon } from "@/components/icons";
 
 export function HostDashboard() {
   const [hostId, setHostId] = useState<string | null>(null);
@@ -32,59 +33,103 @@ export function HostDashboard() {
   }
 
   return (
-    <div className="mx-auto min-h-full max-w-2xl px-4 py-10">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Housefile</h1>
-      <p className="mt-1 text-sm text-zinc-500">Give your property a memory.</p>
+    <div className="grain-backdrop min-h-full">
+      <div className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
+        <header className="animate-fade-up text-center">
+          <div className="mx-auto flex h-14 w-14 animate-float items-center justify-center rounded-2xl bg-clay text-paper shadow-soft">
+            <HouseIcon className="h-7 w-7" />
+          </div>
+          <h1 className="mt-5 font-serif text-4xl font-medium tracking-tight text-ink sm:text-5xl">
+            Housefile
+          </h1>
+          <p className="mt-3 text-base text-taupe">
+            Give your property a memory — every guest question answered from facts, never a guess.
+          </p>
+        </header>
 
-      <form onSubmit={handleImport} className="mt-8 flex gap-2">
-        <input
-          type="url"
-          required
-          placeholder="Paste your Airbnb or Vrbo listing URL"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-        />
-        <button
-          type="submit"
-          disabled={importing || !hostId}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+        <form
+          onSubmit={handleImport}
+          className="animate-fade-up mt-10 flex flex-col gap-3 rounded-2xl border border-sand bg-paper p-3 shadow-soft transition-shadow duration-300 focus-within:shadow-lift sm:flex-row"
+          style={{ animationDelay: "80ms" }}
         >
-          {importing ? "Importing…" : "Import"}
-        </button>
-      </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-
-      <div className="mt-10 space-y-3">
-        {listings === undefined && <p className="text-sm text-zinc-500">Loading…</p>}
-        {listings?.length === 0 && (
-          <p className="text-sm text-zinc-500">
-            No properties yet — paste a listing URL above to start.
+          <input
+            type="url"
+            required
+            placeholder="Paste your Airbnb or Vrbo listing URL"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="flex-1 rounded-xl border border-transparent bg-cream/60 px-4 py-3 text-sm text-ink placeholder:text-taupe-light focus:border-clay focus:bg-paper focus:outline-none focus:ring-4 focus:ring-clay-light transition"
+          />
+          <button
+            type="submit"
+            disabled={importing || !hostId}
+            className="shrink-0 rounded-xl bg-clay px-5 py-3 text-sm font-medium text-paper shadow-sm transition-all duration-200 hover:bg-clay-dark hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {importing ? "Importing…" : "Import listing"}
+          </button>
+        </form>
+        {error && (
+          <p className="animate-fade-in mt-2 text-sm text-clay-dark" role="alert">
+            {error}
           </p>
         )}
-        {listings?.map((listing) => (
-          <a
-            key={listing._id}
-            href={`/host/listing.html?id=${listing._id}`}
-            className="block rounded-lg border border-zinc-200 p-4 transition hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-medium text-zinc-900 dark:text-zinc-50">{listing.name}</span>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  listing.readinessReady
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                }`}
-              >
-                {listing.readinessReady ? "Guest ready" : "Needs setup"}
-              </span>
+
+        <div className="mt-12">
+          {listings === undefined && (
+            <div className="space-y-3">
+              {[0, 1].map((i) => (
+                <div key={i} className="skeleton h-24 w-full" />
+              ))}
             </div>
-            {listing.locationText && (
-              <p className="mt-1 text-sm text-zinc-500">{listing.locationText}</p>
-            )}
-          </a>
-        ))}
+          )}
+
+          {listings?.length === 0 && (
+            <div className="animate-fade-up rounded-2xl border border-dashed border-sand-dark py-14 text-center">
+              <p className="text-sm text-taupe">
+                No properties yet — paste a listing URL above to start.
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {listings?.map((listing, i) => (
+              <a
+                key={listing._id}
+                href={`/host/listing.html?id=${listing._id}`}
+                className="group animate-scale-in overflow-hidden rounded-2xl border border-sand bg-paper shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
+                style={{ animationDelay: `${i * 70}ms` }}
+              >
+                <div className="relative h-32 w-full overflow-hidden bg-sand">
+                  {listing.coverPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={listing.coverPhotoUrl}
+                      alt=""
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-taupe-light">
+                      <HouseIcon className="h-8 w-8" />
+                    </div>
+                  )}
+                  <span
+                    className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur-sm ${
+                      listing.readinessReady ? "bg-sage-bg/90 text-sage" : "bg-honey-bg/90 text-honey"
+                    }`}
+                  >
+                    {listing.readinessReady ? "Guest ready" : "Needs setup"}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <span className="font-serif text-lg font-medium text-ink">{listing.name}</span>
+                  {listing.locationText && (
+                    <p className="mt-1 truncate text-sm text-taupe">{listing.locationText}</p>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
