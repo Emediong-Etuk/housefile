@@ -425,3 +425,33 @@ equally correct structured JSON for these extraction/classification
 prompts, which never needed deep reasoning. Retry count stayed at 5
 as cheap insurance for whatever load the free tier is actually under
 at demo time.
+
+### 2026-09-22 - working tree (continued 2)
+Restyled the "Delete property" trigger and per-fact "Remove" buttons on
+the listing page — both had been plain text links with no visual weight.
+Delete now uses the same solid-clay primary-button treatment (hover/
+active/focus states) as Save and Import elsewhere; Remove now matches
+the outlined Add button directly below it in the same section.
+
+Host raised a real question after testing: nothing stopped importing a
+listing that isn't yours (tried it with someone else's Airbnb listing —
+worked fine, no ownership check anywhere). Built a real answer rather
+than a checkbox: `listings.getVerificationCode` derives a deterministic
+code from `(hostId, sourceUrl)`, shown on the dashboard as soon as a URL
+is typed; `importListing.run` now refuses to import unless Firecrawl's
+scrape of that exact page actually contains the code, which only
+someone who can edit the real listing's description could arrange —
+same pattern as domain/site-ownership verification elsewhere on the
+web. Deployed and confirmed live via the JS bundle.
+
+Host then asked for it reverted — wanted the plain paste-and-go import
+back. Reverted cleanly with `git revert` (single commit, clean tree),
+redeployed both the Convex backend and the static frontend, confirmed
+the plain flow is back. Net effect on this repo: shipped, then
+un-shipped, on request — noted here so the log matches what's actually
+live rather than what was tried.
+
+Also produced a demo-video script (as a separate artifact, not a repo
+file) covering the walkthrough end to end with on-screen actions and
+voiceover lines split per scene, since the submission needs a video and
+the deadline is today.
