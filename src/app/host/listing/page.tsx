@@ -327,6 +327,8 @@ function StaysSection({
           <p className="text-sm text-green-700 dark:text-green-400">Stay page ready</p>
           <a
             href={lastLink}
+            target="_blank"
+            rel="noopener noreferrer"
             className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Open stay page
